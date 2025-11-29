@@ -1,0 +1,93 @@
+name: deploy-aws-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g. commit SHA)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "111122223333"
+  ECR_REPO_NAME: "ci-cd-zero-to-hero"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/gh-actions-ci-prod
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build & push image to ECR
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}"
+          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_URI}"
+          docker build -t "${ECR_URI}:${IMAGE_TAG}" app
+          docker push "${ECR_URI}:${IMAGE_TAG}"
+
+          DIGEST=$(aws ecr describe-images             --repository-name "${ECR_REPO_NAME}"             --image-ids imageTag="${IMAGE_TAG}"             --query 'imageDetails[0].imageDigest'             --output text)
+
+          echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
+          echo "ECR_URI=${ECR_URI}" >> $GITHUB_ENV
+
+      - name: Run Trivy vulnerability scanner on image
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: '${{ env.ECR_URI }}@${{ env.IMAGE_DIGEST }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@fbfd9c6c189226748411491745178e0c2017392d # v0.20.10
+        with:
+          image: '${{ env.ECR_URI }}@${{ env.IMAGE_DIGEST }}'
+          format: 'spdx-json'
+          output-file: 'sbom.spdx.json'
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign image by digest
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes "${ECR_URI}@${IMAGE_DIGEST}"
+
+      - name: Verify signature before deploy
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify "${ECR_URI}@${IMAGE_DIGEST}"
+
+      - name: Deploy to ECS / Kubernetes (placeholder)
+        run: |
+          echo "Deploying image digest ${IMAGE_DIGEST} from ${ECR_URI}"
+          # Replace this with your real deploy command (e.g., Helm upgrade)

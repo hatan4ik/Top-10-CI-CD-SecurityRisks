@@ -1,0 +1,96 @@
+name: deploy-azure-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g. commit SHA)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CONTAINER_REGISTRY: "myprodacr"
+  AZURE_RESOURCE_GROUP: "rg-ci-cd-zero-to-hero"
+  AZURE_SUBSCRIPTION_ID: "00000000-0000-0000-0000-000000000000"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build & push to ACR
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          ACR_LOGIN_SERVER="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
+          az acr login --name "${AZURE_CONTAINER_REGISTRY}"
+
+          IMAGE="${ACR_LOGIN_SERVER}/ci-cd-zero-to-hero:${IMAGE_TAG}"
+          docker build -t "${IMAGE}" app
+          docker push "${IMAGE}"
+
+          DIGEST=$(az acr repository show-manifests             --name "${AZURE_CONTAINER_REGISTRY}"             --repository "ci-cd-zero-to-hero"             --query "[?tags[?contains(@, '${IMAGE_TAG}')]].digest | [0]"             --output tsv)
+
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+          echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
+
+      - name: Run Trivy vulnerability scanner on image
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: '${{ env.IMAGE }}@${{ env.IMAGE_DIGEST }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@fbfd9c6c189226748411491745178e0c2017392d # v0.20.10
+        with:
+          image: '${{ env.IMAGE }}@${{ env.IMAGE_DIGEST }}'
+          format: 'spdx-json'
+          output-file: 'sbom.spdx.json'
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign image by digest
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"
+
+      - name: Verify signature before deploy
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify "${IMAGE}@${IMAGE_DIGEST}"
+
+      - name: Deploy to AKS (placeholder)
+        run: |
+          echo "Deploying image ${IMAGE}@${IMAGE_DIGEST}"
+          # Replace this with your real deploy command (e.g., kubectl, Helm)

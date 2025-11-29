@@ -1,0 +1,141 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+:root {
+  --md-primary-fg-color: #0891b2;
+  --md-primary-fg-color--light: #5ed0ee;
+  --md-primary-fg-color--dark: #0e7490;
+  --md-accent-fg-color: #f97316;
+  --md-typeset-a-color: #0ea5e9;
+}
+
+.md-header {
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 35%, #0ea5e9 90%);
+  color: #f8fafc;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.md-logo {
+  color: #f8fafc !important;
+}
+
+.md-main {
+  background:
+    radial-gradient(1200px circle at 20% 20%, rgba(14, 165, 233, 0.1), transparent 45%),
+    radial-gradient(1000px circle at 80% 10%, rgba(249, 115, 22, 0.08), transparent 40%),
+    #0b1220;
+}
+
+.md-content {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 15%);
+}
+
+.md-typeset {
+  color: #e2e8f0;
+  font-size: 0.98rem;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+  margin-bottom: 0.2em;
+}
+
+.md-typeset h2 {
+  margin-top: 1.8em;
+}
+
+.md-typeset p {
+  color: #cbd5e1;
+}
+
+.md-typeset a {
+  font-weight: 600;
+}
+
+.md-typeset code,
+.md-typeset pre {
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, Menlo, monospace;
+}
+
+.hero {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 32px;
+  margin: 16px 0 32px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+}
+
+.hero .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: #7dd3fc;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.hero h1 {
+  font-size: 2.2rem;
+  margin: 0 0 10px;
+}
+
+.hero .lede {
+  font-size: 1.1rem;
+  max-width: 820px;
+  margin-bottom: 14px;
+}
+
+.hero__cta .md-button {
+  margin-right: 12px;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+.card h3 {
+  margin-top: 0;
+  color: #e5e7eb;
+  font-weight: 700;
+}
+
+.md-typeset .admonition {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media screen and (max-width: 768px) {
+  .hero {
+    padding: 24px;
+  }
+
+  .hero h1 {
+    font-size: 1.7rem;
+  }
+}
+

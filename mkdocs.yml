@@ -1,0 +1,70 @@
+site_name: "CI/CD Security Guide"
+site_description: "OWASP CI/CD Top 10 controls with production-ready workflows for GitHub, GitLab, and Azure DevOps"
+site_url: "https://hatan4ik.github.io/Top-10-CI-CD-SecurityRisks"
+repo_url: "https://github.com/hatan4ik/Top-10-CI-CD-SecurityRisks"
+repo_name: "hatan4ik/Top-10-CI-CD-SecurityRisks"
+edit_uri: ""
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: cyan
+      accent: deep orange
+    - scheme: slate
+      primary: cyan
+      accent: deep orange
+  font:
+    text: "Space Grotesk"
+    code: "JetBrains Mono"
+  icon:
+    logo: material/shield-lock
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Overview: index.md
+  - Practitioner Guide:
+      - OWASP CI/CD Top 10: CI-CD-Top10.md
+  - Platform Hardening:
+      - Branch Protection Playbook: BRANCH_PROTECTION.md
+
+markdown_extensions:
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - section-index
+  - minify:
+      minify_html: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hatan4ik/Top-10-CI-CD-SecurityRisks
+      name: GitHub Repository
+  generator: false
+
+extra_css:
+  - assets/styles/extra.css
+
+use_directory_urls: true
+strict: true
+
