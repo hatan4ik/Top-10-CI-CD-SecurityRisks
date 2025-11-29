@@ -1,0 +1,18 @@
+# CODEOWNERS - Require security team approval for sensitive files
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Workflow files require security team approval
+/.github/workflows/ @your-org/security-team
+/ci/ @your-org/security-team
+
+# Infrastructure changes require platform team approval
+/infra/ @your-org/platform-team @your-org/security-team
+
+# Security configurations require security team approval
+/security/ @your-org/security-team
+
+# Dockerfile changes require security review
+**/Dockerfile @your-org/security-team
+
+# Default owners for everything else
+* @your-org/platform-team

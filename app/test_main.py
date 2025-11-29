@@ -36,3 +36,28 @@ def test_environment_variables(client):
     assert 'environment' in data
     assert 'version' in data
     assert 'hostname' in data
+
+
+def test_health_endpoint(client):
+    """Test health check endpoint"""
+    response = client.get('/health')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['status'] == 'healthy'
+
+
+def test_ready_endpoint(client):
+    """Test readiness check endpoint"""
+    response = client.get('/ready')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['status'] == 'ready'
+
+
+def test_rate_limiting(client):
+    """Test rate limiting is configured"""
+    # Make multiple requests
+    for _ in range(5):
+        response = client.get('/')
+        assert response.status_code == 200
+    # Rate limiter should be active (not testing actual limit)

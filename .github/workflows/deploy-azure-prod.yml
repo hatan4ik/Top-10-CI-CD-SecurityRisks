@@ -62,6 +62,19 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: '${{ env.IMAGE }}@${{ env.IMAGE_DIGEST }}'
+          format: 'spdx-json'
+          output-file: 'sbom.spdx.json'
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
 
