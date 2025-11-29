@@ -25,9 +25,16 @@ stages:
 
     - script: |
         cd app
-        pip install -r requirements.txt
-        python -m compileall main.py
+        mkdir -p ../artifacts/logs
+        pip install -r requirements.txt 2>&1 | tee ../artifacts/logs/pip-install.log
+        python -m compileall main.py 2>&1 | tee ../artifacts/logs/tests.log
       displayName: "Install deps & run basic tests"
+
+    - task: PublishPipelineArtifact@1
+      displayName: "Publish CI logs"
+      inputs:
+        targetPath: "$(System.DefaultWorkingDirectory)/artifacts/logs"
+        artifactName: "ci-logs"
 
 - stage: Deploy_Dev
   displayName: "Deploy to Dev (AWS)"

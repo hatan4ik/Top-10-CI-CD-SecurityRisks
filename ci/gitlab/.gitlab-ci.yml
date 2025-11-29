@@ -13,22 +13,31 @@ build:
   services:
     - docker:24.0-dind
   script:
-    - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHA" app
-    - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHA"
+    - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHA" app 2>&1 | tee artifacts/logs/build.log
+    - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHA" 2>&1 | tee artifacts/logs/push.log
   only:
     - merge_requests
     - main
+  artifacts:
+    when: always
+    paths:
+      - artifacts/logs/*.log
 
 test:
   stage: test
   image: python:3.12-slim
   script:
     - cd app
-    - pip install -r requirements.txt
-    - python -m compileall main.py
+    - mkdir -p ../artifacts/logs
+    - pip install -r requirements.txt 2>&1 | tee ../artifacts/logs/pip-install.log
+    - python -m compileall main.py 2>&1 | tee ../artifacts/logs/tests.log
   only:
     - merge_requests
     - main
+  artifacts:
+    when: always
+    paths:
+      - artifacts/logs/*.log
 
 deploy_prod:
   stage: deploy
