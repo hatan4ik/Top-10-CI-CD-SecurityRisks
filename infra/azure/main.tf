@@ -40,6 +40,29 @@ resource "azurerm_container_registry" "acr" {
   location            = azurerm_resource_group.rg.location
   sku                 = "Premium"
   admin_enabled       = false
+
+  # Enable quarantine policy
+  quarantine_policy_enabled = true
+
+  # Enable retention policy
+  retention_policy {
+    days    = 30
+    enabled = true
+  }
+
+  # Enable trust policy
+  trust_policy {
+    enabled = true
+  }
+
+  # Network rules - restrict to specific IPs in production
+  network_rule_set {
+    default_action = "Deny"
+    ip_rule {
+      action   = "Allow"
+      ip_range = "0.0.0.0/0"  # Replace with your IP ranges
+    }
+  }
 }
 
 # NOTE:

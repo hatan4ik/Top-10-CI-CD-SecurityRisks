@@ -47,6 +47,21 @@ jobs:
           echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
 
+      - name: Run Trivy vulnerability scanner on image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE }}@${{ env.IMAGE_DIGEST }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
 

@@ -17,9 +17,13 @@ build:
     - mkdir -p artifacts/logs
     - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHA" app 2>&1 | tee artifacts/logs/build.log
     - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHA" 2>&1 | tee artifacts/logs/push.log
-    - apk add --no-cache cosign
+    - apk add --no-cache cosign curl
     - DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE:$CI_COMMIT_SHA")"
     - echo "$DIGEST" | tee artifacts/logs/digest.txt
+    - |
+      # Run Trivy scan
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+      trivy image --severity CRITICAL,HIGH --exit-code 1 "$DOCKER_IMAGE:$CI_COMMIT_SHA" 2>&1 | tee artifacts/logs/trivy.log
     - COSIGN_EXPERIMENTAL=1 cosign sign --yes "$DIGEST"
   only:
     - merge_requests

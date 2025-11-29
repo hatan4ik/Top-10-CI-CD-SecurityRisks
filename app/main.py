@@ -1,8 +1,18 @@
 from flask import Flask, jsonify
+from flask_talisman import Talisman
 import os
 import socket
 
 app = Flask(__name__)
+
+# Security headers
+Talisman(app, 
+    force_https=False,  # Set to True in production with proper TLS
+    strict_transport_security=True,
+    content_security_policy={
+        'default-src': "'self'"
+    }
+)
 
 @app.route("/")
 def index():

@@ -22,10 +22,27 @@ jobs:
           cd app
           pip install -r requirements.txt
 
-      - name: Run basic tests (placeholder)
+      - name: Run tests
         run: |
           cd app
-          python -m compileall main.py
+          python -m pytest test_main.py -v
+
+      - name: Run Trivy vulnerability scanner on filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './app'
+          trivy-config: security/trivy-policy.yml
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1'
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
 
       - name: Upload CI logs and reports
         if: always()

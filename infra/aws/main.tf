@@ -34,6 +34,34 @@ variable "ecr_repo_name" {
 resource "aws_ecr_repository" "app" {
   name                 = var.ecr_repo_name
   image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+}
+
+# ECR lifecycle policy to clean up old images
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep last 30 images"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 30
+      }
+      action = {
+        type = "expire"
+      }
+    }]
+  })
 }
 
 # GitHub OIDC provider (if not already created at org/account level)
@@ -45,7 +73,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 
   thumbprint_list = [
-    "ffffffffffffffffffffffffffffffffffffffff"
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
   ]
 }
 
@@ -82,20 +110,24 @@ resource "aws_iam_role_policy" "gh_actions_ci_prod_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid = "ECRPushPull"
+        Sid      = "ECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPushPull"
         Effect = "Allow"
         Action = [
-          "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:CompleteLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:InitiateLayerUpload",
           "ecr:PutImage",
-          "ecr:BatchGetImage"
+          "ecr:BatchGetImage",
+          "ecr:DescribeImages"
         ]
-        Resource = [
-          aws_ecr_repository.app.arn
-        ]
+        Resource = aws_ecr_repository.app.arn
       }
     ]
   })
