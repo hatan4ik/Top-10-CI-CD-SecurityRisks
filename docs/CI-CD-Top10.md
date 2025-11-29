@@ -1,26 +1,31 @@
-# FAANG-style walkthrough: OWASP Top 10 CI/CD Security Risks (CICD-SEC-1 .. CICD-SEC-10)
+# OWASP Top 10 CI/CD Security Risks - Practitioner Guide
 
-Opinionated, GitHub Actions-forward take on the OWASP list with crisp definitions, real pipeline signals, mitigations you can ship, and snippets you can drop into this repo (or adapt for ADO/GitLab/Jenkins).
+This is a concise, OReilly-style field guide to the OWASP Top 10 CI/CD risks (CICD-SEC-1 .. CICD-SEC-10). It stays opinionated, practical, and GitHub Actions-forward, but every pattern generalizes to Azure DevOps, GitLab, or Jenkins.
 
-## 1. CICD-SEC-1: Insufficient Flow Control Mechanisms
-**Problem**: One actor (or token) can push straight to prod with no reviews, gates, or stage separation.
+- Audience: platform and security engineers who own pipelines and guardrails.
+- How to use: skim the signals, apply the controls, copy the snippets from this repo, and turn the checklist at the end into your operating rhythm.
 
-**How it shows up**
-- Direct pushes to `main` auto-deploy; tests are optional
-- Same job definition for dev/stage/prod, just different variables
-- No required approvals before prod; rollbacks also unguarded
+---
 
-**Mitigations**
-- Branch protection + required PR reviews/status checks
+## CICD-SEC-1: Insufficient Flow Control Mechanisms
+What it is: Code can move to prod without enforced reviews, stage separation, or human approvals.
+
+Pipeline signals:
+- Direct pushes to `main` auto-deploy, tests optional
+- Same job definition for dev/stage/prod with only variable changes
+- Rollbacks unguarded or arbitrary hash deploys
+
+Controls to apply:
+- Branch protection with required reviews and status checks
 - Separate pipelines and environments for dev/stage/prod
-- Protect prod environments with required reviewers; deploy from signed tags/releases
+- Protect production environments with required reviewers; deploy from signed tags/releases
 
-**Code: gated deploy with environment protection** (`ci/github/workflows/deploy-aws-prod.yml`)
+Repo snippet: gated deploy with environment protection (`ci/github/workflows/deploy-aws-prod.yml`)
 ```yaml
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production  # require approvals in GitHub UI
+    environment: production
     permissions:
       contents: read
       id-token: write
@@ -33,19 +38,19 @@ jobs:
       - run: ./scripts/deploy.sh "${{ github.event.inputs.image_tag }}"
 ```
 
-## 2. CICD-SEC-2: Inadequate Identity & Access Management
-**Problem**: Broad, shared, or long-lived credentials make compromise a skeleton key for SCM, CI, cloud, and artifacts.
+## CICD-SEC-2: Inadequate Identity and Access Management
+What it is: Broad, shared, or long-lived credentials make compromise a skeleton key for SCM, CI, cloud, and artifacts.
 
-**How it shows up**
+Pipeline signals:
 - Shared "ci-user" accounts; PATs with `repo:*` and `admin:org`
-- Runners with static cloud keys; same service account for every env
+- Runners with static cloud keys; same principal for every environment
 
-**Mitigations**
+Controls to apply:
 - SSO + MFA everywhere; no local accounts
-- OIDC/workload identity instead of static keys; least-privilege roles per repo/branch/env
-- Periodic access reviews; remove dormant users/tokens
+- OIDC/workload identity instead of static keys; least-privilege roles per repo/branch/environment
+- Periodic access reviews; remove dormant users and tokens
 
-**Code: scope OIDC to a branch** (`infra/aws/main.tf`)
+Repo snippet: scope OIDC to a branch (`infra/aws/main.tf`)
 ```hcl
 resource "aws_iam_role" "gh_actions_ci_prod" {
   assume_role_policy = jsonencode({
@@ -65,20 +70,20 @@ resource "aws_iam_role" "gh_actions_ci_prod" {
 }
 ```
 
-## 3. CICD-SEC-3: Dependency Chain Abuse
-**Problem**: Dependencies, base images, and actions/plugins get hijacked (typosquatting, dependency confusion, compromised packages).
+## CICD-SEC-3: Dependency Chain Abuse
+What it is: Dependencies, base images, and actions/plugins are compromised (typosquatting, dependency confusion, poisoned packages).
 
-**How it shows up**
-- `pip install`/`npm install` direct from the internet
+Pipeline signals:
+- `pip install` or `npm install` pulls direct from the internet
 - `docker pull node:latest` from Docker Hub
 - Marketplace actions unpinned
 
-**Mitigations**
-- Internal package proxies/registries; network + policy to enforce them
-- Pin versions; verify signatures/digests; fail builds on CVEs
-- Maintain allowlists for images/actions/plugins
+Controls to apply:
+- Internal package proxies/registries with network and policy enforcement
+- Pin versions; verify signatures or digests; fail builds on CVEs
+- Allowlists for images, actions, and plugins
 
-**Code: fail builds on known CVEs** (`security/trivy-policy.yml`)
+Repo snippet: fail builds on known CVEs (`security/trivy-policy.yml`)
 ```yaml
 checks:
   - "VULN-LOW"
@@ -89,20 +94,20 @@ ignore-unfixed: true
 severity: "MEDIUM"
 ```
 
-## 4. CICD-SEC-4: Poisoned Pipeline Execution (PPE)
-**Problem**: Attackers modify pipeline config or build scripts so CI runs malicious commands during normal workflows.
+## CICD-SEC-4: Poisoned Pipeline Execution (PPE)
+What it is: Pipeline definitions or build scripts are modified to run attacker code during normal workflows.
 
-**How it shows up**
+Pipeline signals:
 - PR edits workflow YAML to exfiltrate secrets
-- Build scripts/Makefiles trojaned
+- Build scripts and Makefiles quietly changed
 - Forked PRs run with secrets enabled
 
-**Mitigations**
-- Treat pipeline config as high-value code (restricted reviews/branches)
+Controls to apply:
+- Treat pipeline config as high-value code (restricted reviews and branches)
 - Separate untrusted PR workflows; disable secrets for forks
 - Use least-privilege tokens and isolate runners
 
-**Code: read-only PR checks** (`ci/github/workflows/pr-checks.yml`)
+Repo snippet: read-only PR checks (`ci/github/workflows/pr-checks.yml`)
 ```yaml
 permissions:
   contents: read
@@ -123,19 +128,19 @@ jobs:
           python -m compileall main.py
 ```
 
-## 5. CICD-SEC-5: Insufficient Pipeline-Based Access Controls (PBAC)
-**Problem**: Jobs and steps all inherit the same broad permissions; any job can reach any secret or environment.
+## CICD-SEC-5: Insufficient Pipeline-Based Access Controls
+What it is: Jobs and steps inherit broad permissions; any job can reach any secret or environment.
 
-**How it shows up**
+Pipeline signals:
 - Every job gets all secrets; prod deploy callable by anyone
-- Shared runner identity for build + deploy
+- Shared runner identity used for build and deploy
 
-**Mitigations**
-- Per-job permissions; restrict who can trigger prod deploys
+Controls to apply:
+- Per-job permissions; restrict who can trigger production deploys
 - Scope secrets per environment and per job
-- Different identities for build vs deploy
+- Different identities for build versus deploy
 
-**Code: prod deploy isolated** (`ci/github/workflows/deploy-azure-prod.yml`)
+Repo snippet: prod deploy isolated (`ci/github/workflows/deploy-azure-prod.yml`)
 ```yaml
 jobs:
   deploy:
@@ -153,19 +158,19 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 ```
 
-## 6. CICD-SEC-6: Insufficient Credential Hygiene
-**Problem**: Secrets are long-lived, over-shared, leaked to logs, or committed to history.
+## CICD-SEC-6: Insufficient Credential Hygiene
+What it is: Secrets are long-lived, over-shared, leaked to logs, or committed to history.
 
-**How it shows up**
-- Static cloud keys in repo/CI secrets; same key for all envs
-- `echo $DB_PASSWORD` in build logs
+Pipeline signals:
+- Static cloud keys in repo or CI secrets; same key for all environments
+- Secrets echoed to build logs
 
-**Mitigations**
-- Prefer OIDC over static keys; segregate creds per env
+Controls to apply:
+- Prefer OIDC over static keys; segregate credentials per environment
 - Never print secrets; rotate frequently; mask logs
 - Use secrets managers (Vault, AWS Secrets Manager, Key Vault)
 
-**Code: no long-lived AWS keys** (`ci/github/workflows/deploy-aws-prod.yml`)
+Repo snippet: no long-lived AWS keys (`ci/github/workflows/deploy-aws-prod.yml`)
 ```yaml
 permissions:
   contents: read
@@ -180,19 +185,19 @@ steps:
       aws-region: ${{ env.AWS_REGION }}
 ```
 
-## 7. CICD-SEC-7: Insecure System Configuration
-**Problem**: Runners, containers, or OS images are unpatched or over-privileged.
+## CICD-SEC-7: Insecure System Configuration
+What it is: Runners, containers, or OS images are unpatched or over-privileged.
 
-**How it shows up**
-- Self-hosted runners reused across tenants; Docker `--privileged`
-- Fat base images with unused packages; running as root
+Pipeline signals:
+- Self-hosted runners reused across tenants; Docker runs with `--privileged`
+- Fat base images with unused packages; containers run as root
 
-**Mitigations**
+Controls to apply:
 - Hardened, ephemeral runners; minimal, pinned images
 - Avoid privileged mode; restrict network to required endpoints
-- Baseline hardening and patching baked into images
+- Bake baseline hardening and patching into images
 
-**Code: minimal runtime image** (`app/Dockerfile`)
+Repo snippet: minimal runtime image (`app/Dockerfile`)
 ```dockerfile
 FROM python:3.12-slim
 
@@ -203,18 +208,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 ```
 
-## 8. CICD-SEC-8: Ungoverned Usage of Third-Party Services
-**Problem**: Arbitrary actions/plugins/images/SaaS are pulled in without vetting or pinning.
+## CICD-SEC-8: Ungoverned Usage of Third-Party Services
+What it is: Arbitrary actions, plugins, images, or SaaS are used without vetting or pinning.
 
-**How it shows up**
+Pipeline signals:
 - `uses: someguy/random-action@master`
 - Jenkins plugins or SaaS hooks added ad hoc
 
-**Mitigations**
-- Allowlist and pin actions/plugins/images; mirror critical ones
+Controls to apply:
+- Allowlist and pin actions, plugins, and images; mirror critical ones
 - Review upstream provenance; least-privilege tokens for SaaS
 
-**Code: pin trusted actions** (`ci/github/workflows/deploy-azure-prod.yml`)
+Repo snippet: pin trusted actions (`ci/github/workflows/deploy-azure-prod.yml`)
 ```yaml
 steps:
   - uses: actions/checkout@v4
@@ -225,18 +230,18 @@ steps:
       subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 ```
 
-## 9. CICD-SEC-9: Improper Artifact Integrity Validation
-**Problem**: Deployments do not verify the artifact built is the one deployed.
+## CICD-SEC-9: Improper Artifact Integrity Validation
+What it is: Deployments do not verify that the artifact built is the one deployed.
 
-**How it shows up**
+Pipeline signals:
 - Deploying by tag (`:latest`) instead of digest
 - Mutable tags; unsigned artifacts
 
-**Mitigations**
-- Use immutable tags; deploy by digest; sign artifacts (cosign/Notary)
+Controls to apply:
+- Use immutable tags; deploy by digest; sign artifacts (cosign or Notary)
 - Lock down registries; store and verify checksums
 
-**Code: capture and deploy by digest** (`ci/github/workflows/deploy-aws-prod.yml`)
+Repo snippet: capture and deploy by digest (`ci/github/workflows/deploy-aws-prod.yml`)
 ```bash
 DIGEST=$(aws ecr describe-images \
   --repository-name "${ECR_REPO_NAME}" \
@@ -245,21 +250,21 @@ DIGEST=$(aws ecr describe-images \
   --output text)
 echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
 ```
-Set ECR immutability too (`infra/aws/main.tf`: `image_tag_mutability = "IMMUTABLE"`).
+Also set ECR immutability (`infra/aws/main.tf`: `image_tag_mutability = "IMMUTABLE"`).
 
-## 10. CICD-SEC-10: Insufficient Logging and Visibility
-**Problem**: You cannot tell who changed what or when; logs are short-lived or siloed.
+## CICD-SEC-10: Insufficient Logging and Visibility
+What it is: You cannot tell who changed what or when because logs are short-lived or siloed.
 
-**How it shows up**
+Pipeline signals:
 - CI logs expire in days; no SCM audit exports
-- No alerts on workflow/secret/branch-protection changes
+- No alerts on workflow, secret, or branch-protection changes
 
-**Mitigations**
-- Export SCM/CI/cloud/artifact audit logs to SIEM with retention
+Controls to apply:
+- Export SCM, CI, cloud, and artifact audit logs to a SIEM with retention
 - Alert on high-risk events (new admin, runner, secret, workflow change)
-- Persist build/test/scan artifacts
+- Persist build, test, and scan artifacts
 
-**Code: persist CI evidence** (add to any workflow, e.g., `ci/github/workflows/pr-checks.yml`)
+Repo snippet: persist CI evidence (add to any workflow, for example `ci/github/workflows/pr-checks.yml`)
 ```yaml
 - name: Upload CI logs and reports
   if: always()
@@ -272,9 +277,10 @@ Set ECR immutability too (`infra/aws/main.tf`: `image_tag_mutability = "IMMUTABL
       ${{ runner.temp }}/**/*.log
 ```
 
-## How to operationalize (FAANG-style)
-1) Make the 10 risks a checklist in your org. Score each repo/pipeline 0-3 per risk.  
-2) Fix 2-3 risks per quarter (e.g., Q1: IAM + credentials; Q2: dependencies + artifacts).  
-3) Implement as code: org policies, Terraform for SCM/infra, hardened base images, OIDC roles.  
-4) Add continuous verification: policy-as-code and tests for pipeline configs (lint YAML, check pinned actions, deny mutable tags).  
-5) Centralize evidence: CI logs, scan reports, and audit events into your SIEM with retention and alerts.
+---
+
+## Operational checklist
+- Score each repo or pipeline 0-3 on every risk. Start with IAM and credentials, then flow control and artifacts.
+- Fix 2-3 risks per quarter. Treat guardrails as code (org policies, Terraform for SCM and cloud, hardened images, OIDC roles).
+- Add continuous verification: lint workflows, deny mutable tags, enforce pinned actions, and require env approvals.
+- Centralize evidence: CI logs, scan reports, and audit events into your SIEM with retention and alerts.

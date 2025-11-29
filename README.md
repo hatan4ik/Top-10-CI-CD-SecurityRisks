@@ -1,26 +1,29 @@
-# CI/CD Zero-to-Hero – OWASP Top 10 Reference
+# CI/CD Security Guide (OWASP Top 10)
 
-This repository is a canonical reference implementation of CI/CD hardening
-patterns aligned with the OWASP Top 10 CI/CD Risks (CICD-SEC-1 .. CICD-SEC-10).
+This repo is a practitioner-friendly guide to hardening pipelines against the OWASP Top 10 CI/CD risks (CICD-SEC-1 .. CICD-SEC-10). It favors concise guidance, reproducible snippets, and opinions that align with how large-scale engineering orgs operate.
 
-It demonstrates:
+## What you get
+- A compact explainer for each OWASP CI/CD risk with signals, controls, and ready-to-use snippets (`docs/CI-CD-Top10.md`).
+- Reference pipelines: GitHub Actions, GitLab CI, and Azure DevOps under `ci/`.
+- Cloud access via OIDC (no long-lived keys) and hardened registries for AWS (ECR) and Azure (ACR) under `infra/`.
+- Security configs for scanning and hygiene in `security/`.
+- A minimal sample app in `app/` to make the workflows concrete.
 
-- GitHub Actions, GitLab CI, and Azure DevOps pipelines
-- OIDC-based access to AWS and Azure (no long-lived cloud keys)
-- Secure use of ECR (AWS) and ACR (Azure) as container registries
-- Separation of build / test / deploy with environment-based approvals
-- Examples of dependency, artifact, and credential hygiene
+## How to use this guide
+1) Read `docs/CI-CD-Top10.md` to map each risk to tangible controls and repo examples.  
+2) Pick the CI stack you run (Actions, GitLab, ADO) and start from the matching files in `ci/`.  
+3) Wire OIDC roles and registry immutability from `infra/` into your own accounts.  
+4) Enforce hygiene: pinned actions/images, per-environment permissions, artifact digests, and log retention.  
+5) Turn the checklist at the end of `docs/CI-CD-Top10.md` into your operating cadence.
 
-**Structure**
+## Repo layout
+- `app/` - Sample Python web service (Dockerized)
+- `ci/github/workflows/` - GitHub Actions reference workflows
+- `ci/gitlab/` - GitLab CI reference configuration
+- `ci/azure-devops/` - Azure DevOps pipeline YAML
+- `infra/aws/` - Terraform snippets for IAM, ECR, and GitHub OIDC
+- `infra/azure/` - Terraform snippets for ACR and federated credentials
+- `security/` - SCA and scanning configuration examples
+- `docs/` - The OWASP Top 10 CI/CD risk guide and supporting notes
 
-- `app/` – Simple Python web service containerized with Docker
-- `ci/github/workflows/` – GitHub Actions reference workflows
-- `ci/gitlab/` – GitLab CI reference configuration
-- `ci/azure-devops/` – Azure DevOps YAML pipeline
-- `infra/aws/` – Terraform snippets for IAM + ECR + OIDC
-- `infra/azure/` – Terraform snippets for ACR + federated credentials
-- `security/` – Example config for SCA/scanning
-- `docs/` – Explanatory docs for the OWASP Top 10 CI/CD risks
-
-> NOTE: All cloud IDs, ARNs, and tenant values are placeholders.
-> Replace them with your own account IDs, tenant IDs, and resource names.
+> All cloud IDs, ARNs, and tenant values are placeholders. Replace with your own account IDs, tenant IDs, and resource names before use.
