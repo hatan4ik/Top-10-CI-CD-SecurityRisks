@@ -6,6 +6,7 @@ stages:
 variables:
   APP_NAME: "ci-cd-zero-to-hero"
   DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/$APP_NAME"
+  IMAGE_DIGEST_FILE: "artifacts/logs/digest.txt"
 
 build:
   stage: build
@@ -53,5 +54,11 @@ deploy_prod:
   only:
     - main
   script:
-    - echo "Deploying $DOCKER_IMAGE:$CI_COMMIT_SHA to production (placeholder)"
+    - apk add --no-cache cosign
+    - if [ ! -f "$IMAGE_DIGEST_FILE" ]; then echo "Missing digest file from build stage"; exit 1; fi
+    - IMAGE_DIGEST="$(cat "$IMAGE_DIGEST_FILE")"
+    - if [ -z "$IMAGE_DIGEST" ]; then echo "Empty digest"; exit 1; fi
+    - COSIGN_EXPERIMENTAL=1 cosign verify "$IMAGE_DIGEST"
+    - echo "Verified $IMAGE_DIGEST, ready to deploy"
+    - echo "Deploying $IMAGE_DIGEST to production (placeholder)"
     # Add your real deployment logic here (Helm, kubectl, etc.)

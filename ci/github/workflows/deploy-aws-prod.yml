@@ -53,6 +53,12 @@ jobs:
         run: |
           cosign sign --yes "${ECR_URI}@${IMAGE_DIGEST}"
 
+      - name: Verify signature before deploy
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify "${ECR_URI}@${IMAGE_DIGEST}"
+
       - name: Deploy to ECS / Kubernetes (placeholder)
         run: |
           echo "Deploying image digest ${IMAGE_DIGEST} from ${ECR_URI}"

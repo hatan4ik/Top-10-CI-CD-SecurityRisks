@@ -56,6 +56,12 @@ jobs:
         run: |
           cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"
 
+      - name: Verify signature before deploy
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify "${IMAGE}@${IMAGE_DIGEST}"
+
       - name: Deploy to AKS (placeholder)
         run: |
           echo "Deploying image ${IMAGE}@${IMAGE_DIGEST}"

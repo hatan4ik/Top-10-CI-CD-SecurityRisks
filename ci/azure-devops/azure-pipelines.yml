@@ -12,6 +12,7 @@ pr:
 variables:
   CONTAINER_IMAGE: ''  # e.g., myregistry.azurecr.io/app
   IMAGE_DIGEST: ''     # e.g., sha256:abcd...
+  SIGN_AND_VERIFY: 'false'  # set to true to enable cosign signing and verification
 
 stages:
 - stage: Build
@@ -76,12 +77,17 @@ stages:
             displayName: "Deploy script"
 
           - script: |
-              if [ -z "$(CONTAINER_IMAGE)" ] || [ -z "$(IMAGE_DIGEST)" ]; then
-                echo "Skipping signing: set CONTAINER_IMAGE and IMAGE_DIGEST pipeline variables to enable cosign."
+              if [ "$(SIGN_AND_VERIFY)" != "true" ]; then
+                echo "Signing/verification disabled (set SIGN_AND_VERIFY=true to enable)."
                 exit 0
+              fi
+              if [ -z "$(CONTAINER_IMAGE)" ] || [ -z "$(IMAGE_DIGEST)" ]; then
+                echo "CONTAINER_IMAGE or IMAGE_DIGEST not set; cannot sign/verify."
+                exit 1
               fi
               curl -sSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
               chmod +x /usr/local/bin/cosign
               COSIGN_EXPERIMENTAL=1 cosign sign --yes "$(CONTAINER_IMAGE)@$(IMAGE_DIGEST)"
-            displayName: "Sign image by digest (cosign)"
+              COSIGN_EXPERIMENTAL=1 cosign verify "$(CONTAINER_IMAGE)@$(IMAGE_DIGEST)"
+            displayName: "Sign and verify image by digest (cosign)"
             condition: and(succeeded(), ne(variables['CONTAINER_IMAGE'], ''), ne(variables['IMAGE_DIGEST'], ''))
