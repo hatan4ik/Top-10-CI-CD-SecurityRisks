@@ -47,6 +47,15 @@ jobs:
           echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign image by digest
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes "${IMAGE}@${IMAGE_DIGEST}"
+
       - name: Deploy to AKS (placeholder)
         run: |
           echo "Deploying image ${IMAGE}@${IMAGE_DIGEST}"

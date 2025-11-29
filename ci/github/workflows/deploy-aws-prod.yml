@@ -44,6 +44,15 @@ jobs:
           echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
           echo "ECR_URI=${ECR_URI}" >> $GITHUB_ENV
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign image by digest
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes "${ECR_URI}@${IMAGE_DIGEST}"
+
       - name: Deploy to ECS / Kubernetes (placeholder)
         run: |
           echo "Deploying image digest ${IMAGE_DIGEST} from ${ECR_URI}"

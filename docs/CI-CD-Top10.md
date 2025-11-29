@@ -251,6 +251,13 @@ DIGEST=$(aws ecr describe-images \
 echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
 ```
 Also set ECR immutability (`infra/aws/main.tf`: `image_tag_mutability = "IMMUTABLE"`).
+For signing, this repo installs cosign and signs by digest after push:
+```yaml
+- uses: sigstore/cosign-installer@v3.5.0
+- run: cosign sign --yes "${ECR_URI}@${IMAGE_DIGEST}"
+  env:
+    COSIGN_EXPERIMENTAL: "1"
+```
 
 ## CICD-SEC-10: Insufficient Logging and Visibility
 What it is: You cannot tell who changed what or when because logs are short-lived or siloed.

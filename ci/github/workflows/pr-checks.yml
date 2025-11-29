@@ -26,3 +26,13 @@ jobs:
         run: |
           cd app
           python -m compileall main.py
+
+      - name: Upload CI logs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-checks-logs
+          path: |
+            **/pytest*.xml
+            **/report*.json
+            ${{ runner.temp }}/**/*.log
