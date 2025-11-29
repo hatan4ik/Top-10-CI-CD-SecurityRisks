@@ -73,7 +73,7 @@ jobs:
           path: sbom.spdx.json
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3.5.0
+        uses: sigstore/cosign-installer@v4.0.0
 
       - name: Sign image by digest
         env:
