@@ -1,0 +1,43 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  APP_NAME: "ci-cd-zero-to-hero"
+  DOCKER_IMAGE: "$CI_REGISTRY_IMAGE/$APP_NAME"
+
+build:
+  stage: build
+  image: docker:24.0
+  services:
+    - docker:24.0-dind
+  script:
+    - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHA" app
+    - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHA"
+  only:
+    - merge_requests
+    - main
+
+test:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - cd app
+    - pip install -r requirements.txt
+    - python -m compileall main.py
+  only:
+    - merge_requests
+    - main
+
+deploy_prod:
+  stage: deploy
+  image: alpine:3.19
+  environment:
+    name: production
+  when: manual
+  only:
+    - main
+  script:
+    - echo "Deploying $DOCKER_IMAGE:$CI_COMMIT_SHA to production (placeholder)"
+    # Add your real deployment logic here (Helm, kubectl, etc.)

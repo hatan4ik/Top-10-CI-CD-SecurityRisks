@@ -1,0 +1,65 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+      - feature/*
+
+stages:
+- stage: Build
+  displayName: "Build & Test"
+  jobs:
+  - job: BuildAndTest
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        cd app
+        pip install -r requirements.txt
+        python -m compileall main.py
+      displayName: "Install deps & run basic tests"
+
+- stage: Deploy_Dev
+  displayName: "Deploy to Dev (AWS)"
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToDev
+    displayName: "Deploy to Dev"
+    environment: "dev"
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - script: |
+              echo "Deploying to dev (placeholder)"
+            displayName: "Deploy script"
+
+- stage: Deploy_Prod
+  displayName: "Deploy to Prod (Azure)"
+  dependsOn: Deploy_Dev
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToProd
+    displayName: "Deploy to Prod"
+    environment: "prod"
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - script: |
+              echo "Deploying to prod (placeholder)"
+            displayName: "Deploy script"

@@ -1,0 +1,7 @@
+checks:
+  - "VULN-LOW"
+  - "VULN-MEDIUM"
+  - "VULN-HIGH"
+  - "VULN-CRITICAL"
+ignore-unfixed: true
+severity: "MEDIUM"
