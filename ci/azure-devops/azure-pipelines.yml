@@ -9,6 +9,10 @@ pr:
       - main
       - feature/*
 
+variables:
+  CONTAINER_IMAGE: ''  # e.g., myregistry.azurecr.io/app
+  IMAGE_DIGEST: ''     # e.g., sha256:abcd...
+
 stages:
 - stage: Build
   displayName: "Build & Test"
@@ -70,3 +74,14 @@ stages:
           - script: |
               echo "Deploying to prod (placeholder)"
             displayName: "Deploy script"
+
+          - script: |
+              if [ -z "$(CONTAINER_IMAGE)" ] || [ -z "$(IMAGE_DIGEST)" ]; then
+                echo "Skipping signing: set CONTAINER_IMAGE and IMAGE_DIGEST pipeline variables to enable cosign."
+                exit 0
+              fi
+              curl -sSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+              chmod +x /usr/local/bin/cosign
+              COSIGN_EXPERIMENTAL=1 cosign sign --yes "$(CONTAINER_IMAGE)@$(IMAGE_DIGEST)"
+            displayName: "Sign image by digest (cosign)"
+            condition: and(succeeded(), ne(variables['CONTAINER_IMAGE'], ''), ne(variables['IMAGE_DIGEST'], ''))

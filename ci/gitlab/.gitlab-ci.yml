@@ -13,8 +13,13 @@ build:
   services:
     - docker:24.0-dind
   script:
+    - mkdir -p artifacts/logs
     - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHA" app 2>&1 | tee artifacts/logs/build.log
     - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHA" 2>&1 | tee artifacts/logs/push.log
+    - apk add --no-cache cosign
+    - DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "$DOCKER_IMAGE:$CI_COMMIT_SHA")"
+    - echo "$DIGEST" | tee artifacts/logs/digest.txt
+    - COSIGN_EXPERIMENTAL=1 cosign sign --yes "$DIGEST"
   only:
     - merge_requests
     - main
